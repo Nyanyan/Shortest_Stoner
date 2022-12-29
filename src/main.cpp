@@ -313,7 +313,7 @@ int is_escapable_escaper(Board board, int depth, bool find_shortest_path){
 
 int n_stoner_like_solutions, n_stoner_solutions;
 
-vector<Stoner_solution> find_stoners(Board board, int depth, vector<int> path){
+vector<Stoner_solution> find_stoners(Board board, int depth, vector<int> &path){
     vector<Stoner_solution> res;
     if (depth == 0){
         if (is_stoner(board)){
@@ -421,16 +421,17 @@ int main(){
     for (int depth = 13; depth <= 16; ++depth){
         n_stoner_like_solutions = 0;
         n_stoner_solutions = 0;
+        uint64_t strt = tim();
         vector<Stoner_solution> stoners = find_stoners_root(depth);
         if (stoners.size()){
-            cout << stoners.size() << " solutions found at depth " << depth << endl;
+            cout << stoners.size() << " solutions found at depth " << depth << " in " << tim() - strt << " ms" << endl;
             sort(stoners.begin(), stoners.end(), cmp_shorter_stoner);
             for (Stoner_solution sol: stoners){
                 cout << convert_path(sol.path) << " " << sol.escape_length << endl;
             }
             break;
         } else{
-            cout << "no stoner path found at depth " << depth << endl;
+            cout << "no stoner path found at depth " << depth << " in " << tim() - strt << " ms" << endl;
         }
     }
     
