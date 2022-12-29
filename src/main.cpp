@@ -117,7 +117,7 @@ int is_escapable_attacker(Board board, int depth, bool find_shortest_path){
     //     try to find at least one way to execute stoner.
 
     // 1. special case
-    //     a. attacker can put on a8 or h8
+    //     a. attacker can put on a8 or h8, then stoner success
     //     b. execute stoner with putting disc on next to escaper's edge
     // if escapable:
     // 2. if escaper can put on a8 in the next turn, then attacker have to 
@@ -129,8 +129,12 @@ int is_escapable_attacker(Board board, int depth, bool find_shortest_path){
     //     a. put everywhere
     int shortest_stoner_escape = ESCAPE_INF;
     uint64_t a_legal = board.get_legal();
-    if (a_legal == 0)
-        return ESCAPE_INF; // passed: attack failed
+    if (a_legal == 0){ // passed
+        board.pass();
+        if (board.get_legal())
+            return is_escapable_escaper(board, depth, find_shortest_path);
+        return ESCAPE_INF; // both passed: attack failed
+    }
     uint_fast8_t a_cell;
     Flip a_flip;
     // 1
@@ -232,8 +236,12 @@ int is_escapable_escaper(Board board, int depth, bool find_shortest_path){
     //     b. others
     Flip e_flip;
     uint64_t e_legal = board.get_legal();
-    if (e_legal == 0)
-        return 0; // passed: escape failed
+    if (e_legal == 0){ // passed
+        board.pass();
+        if (board.get_legal())
+            return is_escapable_attacker(board, depth, find_shortest_path);
+        return ESCAPE_INF; // both passed: escaped!
+    }
     uint_fast8_t e_cell;
     if (e_legal & 0x0000000000000081ULL) // 1
         return ESCAPE_INF; // escaped!

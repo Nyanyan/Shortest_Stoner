@@ -1,4 +1,4 @@
-46 solutions found at depth 13 in 4954 ms
+46 solutions found at depth 13 in 4121 ms
 d3c5d6e7b6d2c6a6d7e8f8g8b7 0
 c4c5d6e7b6d3c6a6d7e8f8g8b7 0
 e6d6c5b6c6e7c7d8f8f6e8g8b7 0
