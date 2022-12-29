@@ -13,8 +13,9 @@ struct Stoner_solution{
 string convert_path(vector<int> path){
     string res;
     for (int coord: path){
-        res += (char)(coord % HW + 'a');
-        res += (char)(coord / HW + '1');
+        int rev_coord = HW2_M1 - coord;
+        res += (char)(rev_coord % HW + 'a');
+        res += (char)(rev_coord / HW + '1');
     }
     return res;
 }
@@ -43,7 +44,7 @@ bool cannot_put_least_one(uint64_t legal, uint64_t mask){
 
 bool is_stoner3_one_direction(Board board){
     bool res = true;
-    res &= !satisfy_at_least_one(board.player | board.opponent, 0x00000000000000F1ULL); // edge shape
+    res &= !satisfy_at_least_one(board.player | board.opponent, 0x00000000000002F1ULL); // empty shape
     res &= satisfy_all(board.player, 0x000000000080000EULL); // escaper on a6, e8, f8, g8
     res &= satisfy_all(board.opponent, 0x0000000000004000ULL); // attacker on b7
     res &= cannot_put_least_one(board, 0x0000000000000080ULL); // escaper cannot put on a8 now
@@ -52,7 +53,7 @@ bool is_stoner3_one_direction(Board board){
 
 bool is_stoner4_one_direction(Board board){
     bool res = true;
-    res &= !satisfy_at_least_one(board.player | board.opponent, 0x00000000000000E1ULL); // edge shape
+    res &= !satisfy_at_least_one(board.player | board.opponent, 0x00000000000002E1ULL); // empty shape
     res &= satisfy_all(board.player, 0x000000000000001EULL); // escaper on d8, e8, f8, g8
     res &= satisfy_all(board.opponent, 0x0000000000004000ULL); // attacker on b7
     res &= cannot_put_least_one(board, 0x0000000000000080ULL); // escaper cannot put on a8 now
@@ -62,7 +63,7 @@ bool is_stoner4_one_direction(Board board){
 
 bool is_stoner3_1_one_direction(Board board){
     bool res = true;
-    res &= !satisfy_at_least_one(board.player | board.opponent, 0x00000000000000D1ULL); // edge shape
+    res &= !satisfy_at_least_one(board.player | board.opponent, 0x00000000000002D1ULL); // empty shape
     res &= satisfy_all(board.player, 0x000000000000000EULL); // escaper on e8, f8, g8
     res &= satisfy_all(board.opponent, 0x0000000000004020ULL); // attacker on b7, c8
     res &= cannot_put_least_one(board, 0x0000000000000080ULL); // escaper cannot put on a8 now
@@ -110,6 +111,7 @@ int is_escapable_attacker(Board board){
     //     try to find at least one way to execute stoner.
 
     // 1. special case
+    //     b. attacker can put on a8 or h8
     //     a. execute stoner with putting disc on next to escaper's edge
     // if escapable:
     // 2. if escaper can put on a8 in the next turn, then attacker have to 
@@ -126,6 +128,8 @@ int is_escapable_attacker(Board board){
     uint_fast8_t a_cell;
     Flip a_flip;
     // 1
+    if (a_legal & 0x0000000000000081ULL) // 1-a
+        return 0;
     uint64_t execute_stoner_puttable = 0;
     uint_fast8_t execute_stoner_place = 64;
     if (satisfy_all(board.opponent, 0x000000000000001EULL)){ // stoner type-4
@@ -135,8 +139,8 @@ int is_escapable_attacker(Board board){
         execute_stoner_puttable = 0x0000000000000010ULL;
         execute_stoner_place = 4;
     }
-    if (a_legal & execute_stoner_puttable){ // can execute stoner?
-        a_flip.calc_flip(board.player,board.opponent, execute_stoner_place); // put on c8
+    if (a_legal & execute_stoner_puttable){ // 1-b
+        a_flip.calc_flip(board.player,board.opponent, execute_stoner_place);
         board.move(&a_flip);
             if (is_stoner_success(board))
                 return 0;
@@ -298,10 +302,16 @@ vector<Stoner_solution> find_stoners(Board board, int depth, vector<int> path){
             Stoner_solution elem;
             for (int policy: path)
                 elem.path.emplace_back(policy);
-            //elem.escape_length = is_escapable_escaper(board);
-            //if (elem.escape_length < ESCAPE_INF)
-            elem.escape_length = ESCAPE_INF;
-            res.emplace_back(elem);
+            //elem.escape_length = ESCAPE_INF;
+            cerr << "stoner-like path found " << convert_path(elem.path);
+            elem.escape_length = is_escapable_escaper(board);
+            cerr << "\r                                                                                ";
+            if (elem.escape_length < ESCAPE_INF){
+                cerr << "\rstoner found " << convert_path(elem.path) << endl;
+                res.emplace_back(elem);
+            } else{
+                cerr << "\rescapable stoner found" << endl;
+            }
         }
         return res;
     }
@@ -386,7 +396,7 @@ int main(){
     cout << is_escapable_escaper(board) << endl;
     */
     
-    for (int depth = 0; depth <= 16; ++depth){
+    for (int depth = 13; depth <= 16; ++depth){
         vector<Stoner_solution> stoners = find_stoners_root(depth);
         if (stoners.size()){
             cout << stoners.size() << " solutions found at depth " << depth << endl;
