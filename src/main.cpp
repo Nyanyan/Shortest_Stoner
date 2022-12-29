@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "board.hpp"
 
 using namespace std;
@@ -115,11 +116,13 @@ int is_escapable_attacker(Board board){
     //     a. re-build the X line
     // 3. else if attacker cannot execute stoner now
     //     a. put disc and make it executable
-    //     b. put everywhere
+    //     b. others
     // 4. else
     //     a. put everywhere
     int shortest_stoner_escape = ESCAPE_INF;
     uint64_t a_legal = board.get_legal();
+    if (a_legal == 0)
+        return ESCAPE_INF; // passed: attack failed
     uint_fast8_t a_cell;
     Flip a_flip;
     // 1
@@ -201,13 +204,16 @@ int is_escapable_escaper(Board board){
     //     a. put there and escaper can escape
     // if not escapable:
     // 2. if attacker can execute stoner with putting disc on next to escaper's edge
-    //     a. disturb it
-    //     b. put everywhere
+    //     a. disturb it and cut the line
+    //     b. only disturb it
+    //     c. others
     // 3. else 
     //     a. cut the X line
-    //     b. put everywhere
+    //     b. others
     Flip e_flip;
     uint64_t e_legal = board.get_legal();
+    if (e_legal == 0)
+        return 0; // passed: escape failed
     uint_fast8_t e_cell;
     if (e_legal & 0x0000000000000081ULL) // 1
         return ESCAPE_INF; // escaped!
@@ -222,7 +228,7 @@ int is_escapable_escaper(Board board){
         for (e_cell = first_bit(&e_legal); e_legal; e_cell = next_bit(&e_legal)){ // 2-a
             e_flip.calc_flip(board.player, board.opponent, e_cell);
             board.move(&e_flip);
-                if ((board.get_legal() & execute_stoner_puttable) == 0ULL){
+                if (cannot_put_least_one(board, execute_stoner_puttable) && !cannot_put_least_one(calc_legal(board.opponent, board.player), 0x0000000000000080ULL)){
                     int stoner_escape = is_escapable_attacker(board);
                     if (stoner_escape < ESCAPE_INF){
                         longest_stoner_escape = max(longest_stoner_escape, stoner_escape);
@@ -232,7 +238,21 @@ int is_escapable_escaper(Board board){
                     e_passive_legal ^= 1ULL << e_cell;
             board.undo(&e_flip);
         }
+        uint64_t e_passive_legal2 = 0;
         for (e_cell = first_bit(&e_passive_legal); e_passive_legal; e_cell = next_bit(&e_passive_legal)){ // 2-b
+            e_flip.calc_flip(board.player, board.opponent, e_cell);
+            board.move(&e_flip);
+                if (cannot_put_least_one(board, execute_stoner_puttable)){
+                    int stoner_escape = is_escapable_attacker(board);
+                    if (stoner_escape < ESCAPE_INF){
+                        longest_stoner_escape = max(longest_stoner_escape, stoner_escape);
+                    } else
+                        return ESCAPE_INF; // escaped!
+                } else
+                    e_passive_legal2 ^= 1ULL << e_cell;
+            board.undo(&e_flip);
+        }
+        for (e_cell = first_bit(&e_passive_legal2); e_passive_legal2; e_cell = next_bit(&e_passive_legal2)){ // 2-c
             e_flip.calc_flip(board.player, board.opponent, e_cell);
             board.move(&e_flip);
                 int stoner_escape = is_escapable_attacker(board);
@@ -278,23 +298,37 @@ vector<Stoner_solution> find_stoners(Board board, int depth, vector<int> path){
             Stoner_solution elem;
             for (int policy: path)
                 elem.path.emplace_back(policy);
-            elem.escape_length = is_escapable_escaper(board);
-            if (elem.escape_length < ESCAPE_INF)
-                res.emplace_back(elem);
+            //elem.escape_length = is_escapable_escaper(board);
+            //if (elem.escape_length < ESCAPE_INF)
+            elem.escape_length = ESCAPE_INF;
+            res.emplace_back(elem);
         }
         return res;
     }
+    uint64_t discs = board.player | board.opponent;
+    bool can_be_a_stoner = false;
+    if (depth >= 6 - pop_count_ull(discs & 0x000000000040401EULL))
+        can_be_a_stoner = true;
+    else if (depth >= 5 - pop_count_ull(discs & 0x000000000080400EULL)) // type-3
+        can_be_a_stoner = true;
+    else if (depth >= 6 - pop_count_ull(discs & 0x000000000040402EULL)) // type-3-1
+        can_be_a_stoner = true;
+    if (!can_be_a_stoner)
+        return res;
     uint64_t legal = board.get_legal();
-    Flip flip;
-    for (uint_fast8_t cell = first_bit(&legal); legal; cell = next_bit(&legal)){
-        flip.calc_flip(board.player, board.opponent, cell);
-        path.emplace_back(cell);
-        board.move(&flip);
-            vector<Stoner_solution> n_res = find_stoners(board, depth - 1, path);
-            for (Stoner_solution solution: n_res)
-                res.emplace_back(solution);
-        board.undo(&flip);
-        path.pop_back();
+    legal &= ~0x00000000000000C1ULL; // these moves do not lead to a stoner.
+    if (legal){ // if not pseudo-passed
+        Flip flip;
+        for (uint_fast8_t cell = first_bit(&legal); legal; cell = next_bit(&legal)){
+            flip.calc_flip(board.player, board.opponent, cell);
+            path.emplace_back(cell);
+            board.move(&flip);
+                vector<Stoner_solution> n_res = find_stoners(board, depth - 1, path);
+                for (Stoner_solution solution: n_res)
+                    res.emplace_back(solution);
+            board.undo(&flip);
+            path.pop_back();
+        }
     }
     return res;
 }
@@ -333,32 +367,38 @@ vector<Stoner_solution> find_stoners_root(int depth){
 int main(){
     bit_init();
     flip_init();
+    /*
     Board board;
     // not escapable
     //board.player = 0x0000000008D8080EULL;
     //board.opponent = 0x0000041C14244000ULL;
+    board.player = 0x0000004000D0080EULL;
+    board.opponent = 0x00000818382C4400ULL;
 
     // escapable
     //board.player = 0x0000000040C0100EULL;
     //board.opponent = 0x0000003838384800ULL;
+    //board.player = 0x0000000048C0100EULL;
+    //board.opponent = 0x0000003830304800ULL;
 
     board.print();
     cout << "is_stoner " << is_stoner(board) << endl;
     cout << is_escapable_escaper(board) << endl;
-    /*
+    */
+    
     for (int depth = 0; depth <= 16; ++depth){
         vector<Stoner_solution> stoners = find_stoners_root(depth);
         if (stoners.size()){
             cout << stoners.size() << " solutions found at depth " << depth << endl;
             sort(stoners.begin(), stoners.end(), cmp_shorter_stoner);
             for (Stoner_solution sol: stoners){
-                cout << convert_path(sol.path) << " " << convert_path(sol.escape_path) << endl;
+                cout << convert_path(sol.path) << " " << sol.escape_length << endl;
             }
             break;
         } else{
             cout << "no stoner path found at depth " << depth << endl;
         }
     }
-    */
+    
     return 0;
 }
