@@ -426,7 +426,7 @@ int main(){
     cout << is_escapable_escaper(board, 0) << endl;
     */
 
-    for (int depth = 13; depth <= 16; ++depth){
+    for (int depth = 0; depth <= 14; ++depth){
         n_stoner_like_solutions = 0;
         n_stoner_solutions = 0;
         uint64_t strt = tim();
@@ -437,7 +437,7 @@ int main(){
             for (Stoner_solution sol: stoners){
                 cout << convert_path(sol.path) << " " << sol.escape_length << endl;
             }
-            break;
+            //break;
         } else{
             cout << "no stoner path found at depth " << depth << " in " << tim() - strt << " ms" << endl;
         }
