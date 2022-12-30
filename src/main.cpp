@@ -5,7 +5,7 @@ using namespace std;
 
 #define ESCAPE_INF 100
 
-#define ESCAPE_MAX_PATH_LENGTH 15
+#define ESCAPE_MAX_PATH_LENGTH 14
 
 struct Stoner_solution{
     vector<int> path;
@@ -434,14 +434,14 @@ int main(){
         uint64_t strt = tim();
         vector<Stoner_solution> stoners = find_stoners_root(depth);
         if (stoners.size()){
-            cout << stoners.size() << " solutions found at depth " << depth << " in " << tim() - strt << " ms" << endl;
+            cout << n_stoner_like_solutions << " stoner-like solutions found and " << stoners.size() << " successful stoners found at depth " << depth << " in " << tim() - strt << " ms" << endl;
             sort(stoners.begin(), stoners.end(), cmp_shorter_stoner);
             for (Stoner_solution sol: stoners){
-                cout << convert_path(sol.path) << " " << sol.escape_length << endl;
+                cout << convert_path(sol.path) << " longest way to escape: " << sol.escape_length << " moves" << endl;
             }
             break;
         } else{
-            cout << "no stoner path found at depth " << depth << " in " << tim() - strt << " ms" << endl;
+            cout << n_stoner_like_solutions << " stoner-like solutions found but no successful stoner path found at depth " << depth << " in " << tim() - strt << " ms" << endl;
         }
     }
     
