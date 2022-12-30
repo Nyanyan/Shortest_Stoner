@@ -356,6 +356,8 @@ vector<Stoner_solution> find_stoners(Board board, int depth, vector<int> &path){
     if (!can_be_a_stoner)
         return res;
     uint64_t legal = board.get_legal();
+    if (legal & 0x0000000000000081ULL)
+        return res;
     legal &= ~0x00000000000000C1ULL; // these moves do not lead to a stoner.
     if (legal){ // if not pseudo-passed
         Flip flip;
@@ -437,7 +439,7 @@ int main(){
             for (Stoner_solution sol: stoners){
                 cout << convert_path(sol.path) << " " << sol.escape_length << endl;
             }
-            //break;
+            break;
         } else{
             cout << "no stoner path found at depth " << depth << " in " << tim() - strt << " ms" << endl;
         }
